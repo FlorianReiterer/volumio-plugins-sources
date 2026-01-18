@@ -22,7 +22,7 @@
       "bookworm"
     ],
     "details": "Mother Earth Radio is a free HD music station without advertising. Best audio quality, selected tracks, audiophile only. Stream now!",
-    "changelog": "1.4.0 SSE real-time metadata, High Latency Mode for unstable networks"
+    "changelog": "1.4.0 SSE real-time metadata, High Latency Mode, 3 quality levels (192k/96k FLAC, AAC)"
   },
   "engines": {
     "node": ">=20",
