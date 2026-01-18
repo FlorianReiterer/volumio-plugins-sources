@@ -239,7 +239,11 @@ class MotherEarthRadio {
         const duration = np.now_playing.duration || np.now_playing.remaining || 0;
         const elapsed = np.now_playing.elapsed || 0;
         
-        if (!song) return;
+        // 🔥 IGNORE EMPTY SSE PINGS (Keep-Alive) - check for valid song data
+        if (!song || !song.title || !song.artist) {
+            this.log('info', '🔇 Ignoring empty SSE ping (keep-alive)');
+            return;
+        }
 
         this.log('info', '🎵 ' + song.artist + ' - ' + song.title);
         
