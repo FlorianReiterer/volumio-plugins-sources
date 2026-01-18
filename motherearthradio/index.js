@@ -201,11 +201,19 @@ class MotherEarthRadio {
     handleSSEMessage(message, channelKey) {
         const lines = message.split('\n');
         let data = null;
+        let rawData = null;
         
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].indexOf('data: ') === 0) {
+                rawData = lines[i].substring(6).trim();
+                
+                // 🔥 IGNORE EMPTY PINGS (like Android app)
+                if (rawData === '' || rawData === '{}') {
+                    return;
+                }
+                
                 try {
-                    data = JSON.parse(lines[i].substring(6));
+                    data = JSON.parse(rawData);
                 } catch (e) {
                     // Ignore parse errors
                 }
@@ -213,6 +221,11 @@ class MotherEarthRadio {
         }
         
         if (!data) return;
+        
+        // 🔥 IGNORE EMPTY JSON OBJECTS
+        if (Object.keys(data).length === 0) {
+            return;
+        }
         
         if (data.connect) {
             if (data.connect.data && Array.isArray(data.connect.data)) {
@@ -239,7 +252,10 @@ class MotherEarthRadio {
         const duration = np.now_playing.duration || np.now_playing.remaining || 0;
         const elapsed = np.now_playing.elapsed || 0;
         
-        if (!song) return;
+        // 🔥 IGNORE EMPTY SSE PINGS - must have valid song with title AND artist
+        if (!song || !song.title || !song.artist) {
+            return;
+        }
 
         this.log('info', '🎵 ' + song.artist + ' - ' + song.title);
         
@@ -283,8 +299,8 @@ class MotherEarthRadio {
             album: song.album || channel.name,
             streaming: true,
             disableUiControls: true,
-            duration: duration,
-            seek: 0,
+            duration: duration,  // Real song duration
+            seek: elapsed,  // Current position in song
             samplerate: samplerate,
             bitdepth: bitdepth,
             channels: 2
@@ -310,9 +326,11 @@ class MotherEarthRadio {
                 queueItem.channels = 2;
             }
             
-            // Reset Volumio internal timer
-            this.commandRouter.stateMachine.currentSeek = 0;
-            this.commandRouter.stateMachine.playbackStart = Date.now();
+            // 🔥 Set playbackStart so that seek counter shows elapsed time
+            // This makes the counter restart for each new song
+            const now = Date.now();
+            this.commandRouter.stateMachine.currentSeek = elapsed;
+            this.commandRouter.stateMachine.playbackStart = now - (elapsed * 1000);
             this.commandRouter.stateMachine.currentSongDuration = duration;
             this.commandRouter.stateMachine.askedForPrefetch = false;
             this.commandRouter.stateMachine.prefetchDone = false;
