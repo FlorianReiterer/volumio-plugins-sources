@@ -108,7 +108,7 @@ class MotherEarthRadio {
         this.addToBrowseSources();
         
         // Load user-configured delay
-        this.metadataDelay = this.config.get('apiDelay') || 0;
+        this.metadataDelay = this.config.get('apiDelay') || 3;
         
         // Load High Latency Mode setting
         this.highLatencyMode = this.config.get('highLatencyMode') || false;
@@ -316,7 +316,7 @@ class MotherEarthRadio {
             title: song.title || 'Unknown',
             artist: song.artist || channel.name,
             album: song.album || '',
-            albumart: song.art || '/albumart?sourceicon=music_service/motherearthradio/motherearthlogo.svg',
+            albumart: song.art || '/albumart?sourceicon=music_service/motherearthradio/mer-logo-cube-bold-1x 512.png',
             uri: this.currentUri,
             trackType: this.currentUri?.includes('.aac') ? 'aac' : 'flac',
             seek: elapsed * 1000,
@@ -415,7 +415,7 @@ class MotherEarthRadio {
                     title: `${channel?.name || 'Mother Earth Radio'}`,
                     artist: 'Connecting...',
                     album: qualityLabel,
-                    albumart: '/albumart?sourceicon=music_service/motherearthradio/mer.svg',
+                    albumart: '/albumart?sourceicon=music_service/motherearthradio/mer-logo-cube-bold-1x 512.png',
                     uri: track.uri,
                     streaming: true,
                     isStreaming: true,
@@ -494,7 +494,7 @@ class MotherEarthRadio {
             uri: 'motherearthradio',
             plugin_type: 'music_service',
             plugin_name: 'motherearthradio',
-            albumart: '/albumart?sourceicon=music_service/motherearthradio/mer.svg'
+            albumart: '/albumart?sourceicon=music_service/motherearthradio/mer-logo-wide-smooth-1x.png'
         };
         this.commandRouter.volumioAddToBrowseSources(data);
     }
@@ -522,7 +522,7 @@ class MotherEarthRadio {
                 artist: 'Mother Earth Radio',
                 album: 'Hi-Res Lossless',
                 uri: `motherearthradio/${key}/flac192`,
-                albumart: '/albumart?sourceicon=music_service/motherearthradio/mer.svg'
+                albumart: '/albumart?sourceicon=music_service/motherearthradio/mer-logo-cube-bold-1x 512.png'
             });
             
             // FLAC 96kHz/24bit
@@ -533,7 +533,7 @@ class MotherEarthRadio {
                 artist: 'Mother Earth Radio',
                 album: 'Lossless',
                 uri: `motherearthradio/${key}/flac96`,
-                albumart: '/albumart?sourceicon=music_service/motherearthradio/mer.svg'
+                albumart: '/albumart?sourceicon=music_service/motherearthradio/mer-logo-cube-bold-1x 512.png'
             });
             
             // AAC 96kHz
@@ -544,7 +544,7 @@ class MotherEarthRadio {
                 artist: 'Mother Earth Radio',
                 album: 'High Quality',
                 uri: `motherearthradio/${key}/aac`,
-                albumart: '/albumart?sourceicon=music_service/motherearthradio/mer.svg'
+                albumart: '/albumart?sourceicon=music_service/motherearthradio/mer-logo-cube-bold-1x 512.png'
             });
         }
 
@@ -584,7 +584,7 @@ class MotherEarthRadio {
             album: qualityLabel,
             uri: uri,
             realUri: streamUrl,
-            albumart: '/albumart?sourceicon=music_service/motherearthradio/mer.svg',
+            albumart: '/albumart?sourceicon=music_service/motherearthradio/mer-logo-cube-bold-1x 512.png',
             duration: 0,
             samplerate: this.getSampleRate(quality),
             bitdepth: this.getBitDepth(quality)
