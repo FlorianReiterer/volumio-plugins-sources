@@ -1,37 +1,37 @@
 {
   "page": {
-    "label": "PLUGIN_NAME"
+    "label": "Mother Earth Radio"
   },
   "sections": [
     {
       "id": "timing_settings",
       "element": "section",
-      "label": "DELAY_SETTINGS",
+      "label": "Network & Timing",
       "icon": "fa-clock-o",
       "content": [
         {
           "id": "highLatencyMode",
           "element": "switch",
-          "label": "HIGH_LATENCY_MODE",
-          "doc": "HIGH_LATENCY_DOC",
+          "label": "High Latency Mode",
+          "doc": "Enable for unstable networks. Increases buffer to 32 MB and adds 2 second metadata delay.",
           "value": false
         },
         {
           "id": "apiDelay",
           "element": "input",
           "type": "number",
-          "label": "API_DELAY",
-          "doc": "DELAY_DOC",
-          "value": 3
+          "label": "Additional Metadata Delay (ms)",
+          "doc": "Extra delay before displaying metadata. Usually 0 is fine.",
+          "value": 0
         }
       ]
     },
     {
       "id": "about",
       "element": "section", 
-      "label": "ABOUT",
+      "label": "About",
       "icon": "fa-info-circle",
-      "description": "ABOUT_DESC"
+      "description": "Mother Earth Radio Plugin v1.4 - SSE real-time metadata. No polling needed."
     }
   ]
 }
