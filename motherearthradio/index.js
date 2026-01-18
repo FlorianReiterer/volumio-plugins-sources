@@ -299,7 +299,7 @@ class MotherEarthRadio {
             album: song.album || channel.name,
             streaming: true,
             disableUiControls: true,
-            duration: duration,
+            duration: 0,  // 🔥 ALWAYS 0 for webradio - prevents seek overflow
             seek: 0,
             samplerate: samplerate,
             bitdepth: bitdepth,
@@ -320,7 +320,7 @@ class MotherEarthRadio {
                 queueItem.album = song.album || channel.name;
                 queueItem.albumart = albumart;
                 queueItem.trackType = 'Mother Earth ' + channel.name;
-                queueItem.duration = duration;
+                queueItem.duration = 0;  // 🔥 ALWAYS 0 for webradio
                 queueItem.samplerate = samplerate;
                 queueItem.bitdepth = bitdepth;
                 queueItem.channels = 2;
@@ -329,7 +329,7 @@ class MotherEarthRadio {
             // Reset Volumio internal timer
             this.commandRouter.stateMachine.currentSeek = 0;
             this.commandRouter.stateMachine.playbackStart = Date.now();
-            this.commandRouter.stateMachine.currentSongDuration = duration;
+            this.commandRouter.stateMachine.currentSongDuration = 0;  // 🔥 ALWAYS 0 for webradio
             this.commandRouter.stateMachine.askedForPrefetch = false;
             this.commandRouter.stateMachine.prefetchDone = false;
             this.commandRouter.stateMachine.simulateStopStartDone = false;
