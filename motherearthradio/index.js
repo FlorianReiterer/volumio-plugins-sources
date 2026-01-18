@@ -35,7 +35,7 @@ class MotherEarthRadio {
         this.sseReconnectAttempts = 0;
         this.sseReconnectTimer = null;
         
-        this.metadataDelay = 3;
+        this.metadataDelay = 0;
         this.highLatencyMode = false;
         
         this.apiHost = 'motherearth.streamserver24.com';
@@ -267,7 +267,7 @@ class MotherEarthRadio {
 
         const samplerate = this.getSampleRate(this.currentQuality);
         const bitdepth = this.getBitDepth(this.currentQuality);
-        const albumart = song.art || '/albumart?sourceicon=music_service/motherearthradio/motherearthlogo.svg';
+        const albumart = song.art || '/albumart?sourceicon=music_service/motherearthradio/mer-logo-cube-bold-1x 512.png';
 
         const merState = {
             status: 'play',
@@ -405,7 +405,7 @@ class MotherEarthRadio {
                     title: 'Connecting...',
                     artist: 'Mother Earth Radio',
                     album: channel.name + ' · ' + qualityLabel,
-                    albumart: '/albumart?sourceicon=music_service/motherearthradio/motherearthlogo.svg',
+                    albumart: '/albumart?sourceicon=music_service/motherearthradio/mer-logo-cube-bold-1x 512.png',
                     uri: track.uri,
                     streaming: true,
                     disableUiControls: true,
