@@ -417,7 +417,11 @@ class MotherEarthRadio {
         this.mpdPlugin.sendMpdCommand('stop', [])
             .then(function() { return self.mpdPlugin.sendMpdCommand('clear', []); })
             .then(function() { return self.mpdPlugin.sendMpdCommand('add "' + streamUrl + '"', []); })
-            .then(function() { return self.mpdPlugin.sendMpdCommand('play', []); })
+            .then(function() {
+                // 🔥 Toast message like v1.3 - hardcoded English
+                self.commandRouter.pushToastMessage('info', 'Mother Earth Radio', 'Connecting to stream...');
+                return self.mpdPlugin.sendMpdCommand('play', []);
+            })
             .then(function() {
                 const channel = self.channels[self.currentChannel];
                 const qualityLabel = self.getQualityLabel(self.currentQuality);
@@ -455,6 +459,9 @@ class MotherEarthRadio {
     stop() {
         this.isPlaying = false;
         this.stopSSE();
+        
+        // 🔥 Toast message like v1.3 - hardcoded English
+        this.commandRouter.pushToastMessage('info', 'Mother Earth Radio', 'Stopped playback');
         
         this.commandRouter.servicePushState({
             status: 'stop',
