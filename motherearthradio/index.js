@@ -2,11 +2,6 @@
 
 /**
  * Mother Earth Radio Plugin v1.4
- * 
- * Features:
- * - SSE (Server-Sent Events) for real-time metadata updates
- * - No polling - server pushes when track changes
- * - Bookworm compatible
  */
 
 const libQ = require('kew');
@@ -14,16 +9,11 @@ const fs = require('fs-extra');
 const https = require('https');
 const { URL } = require('url');
 
-// SSE reconnect settings
 const SSE_RECONNECT_DELAY_MS = 3000;
 const SSE_MAX_RECONNECT_ATTEMPTS = 10;
-
-// High Latency Mode settings
 const HIGH_LATENCY_BUFFER_KB = 32768;
 const HIGH_LATENCY_DELAY_MS = 2000;
 const NORMAL_BUFFER_KB = 4096;
-
-// Service name
 const SERVICE_NAME = 'motherearthradio';
 
 class MotherEarthRadio {
@@ -39,6 +29,7 @@ class MotherEarthRadio {
         this.currentUri = null;
         this.currentChannel = null;
         this.currentQuality = null;
+        this.isPlaying = false;  // Track play state to prevent SSE from restarting playback
         
         this.sseRequest = null;
         this.sseReconnectAttempts = 0;
@@ -236,6 +227,12 @@ class MotherEarthRadio {
     }
 
     processNowPlayingData(data, channelKey) {
+        // Don't push state if not playing!
+        if (!this.isPlaying) {
+            this.log('info', '⏸️ SSE update ignored - not playing');
+            return;
+        }
+        
         const np = (data && data.pub && data.pub.data && data.pub.data.np) || (data && data.np);
         
         if (!np || !np.now_playing) return;
@@ -261,7 +258,12 @@ class MotherEarthRadio {
     }
 
     pushMetadata(song, duration, elapsed) {
-        const self = this;
+        // Double-check we're still playing
+        if (!this.isPlaying) {
+            this.log('info', '⏸️ pushMetadata ignored - not playing');
+            return;
+        }
+        
         const channel = this.channels[this.currentChannel];
         if (!channel) return;
 
@@ -269,12 +271,12 @@ class MotherEarthRadio {
         const bitdepth = this.getBitDepth(this.currentQuality);
         const albumart = song.art || '/albumart?sourceicon=music_service/motherearthradio/motherearthlogo.svg';
 
-        // Build state object
+        // FIXED: title = song title, artist = artist name
         const state = {
             status: 'play',
             service: SERVICE_NAME,
-            title: song.title || 'Unknown Title',
-            artist: song.artist || 'Mother Earth Radio',
+            title: song.title || 'Unknown Title',      // Song title goes here!
+            artist: song.artist || 'Mother Earth Radio', // Artist name goes here!
             album: song.album || channel.name,
             albumart: albumart,
             uri: this.currentUri,
@@ -288,14 +290,19 @@ class MotherEarthRadio {
             isStreaming: true
         };
 
-        this.log('info', '📤 Pushing state: ' + song.artist + ' - ' + song.title + ' | art: ' + albumart);
+        this.log('info', '📤 State: title=' + state.title + ', artist=' + state.artist);
         
-        // Push state to Volumio
         this.commandRouter.servicePushState(state, SERVICE_NAME);
     }
 
     scheduleSSEReconnect(sseUrl, channelKey) {
         const self = this;
+        
+        // Don't reconnect if not playing
+        if (!this.isPlaying) {
+            this.log('info', '⏸️ SSE reconnect skipped - not playing');
+            return;
+        }
         
         if (this.sseReconnectAttempts >= SSE_MAX_RECONNECT_ATTEMPTS) {
             this.log('error', 'SSE: Max reconnect attempts reached');
@@ -324,6 +331,7 @@ class MotherEarthRadio {
         }
         
         this.sseReconnectAttempts = 0;
+        this.log('info', '🔌 SSE stopped');
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -339,6 +347,7 @@ class MotherEarthRadio {
         this.currentChannel = this.getChannelFromUri(track.uri);
         this.currentQuality = this.getQualityFromUri(track.uri);
         this.currentUri = track.uri;
+        this.isPlaying = true;  // Set playing flag
         
         const streamUrl = this.getStreamUrl(this.currentChannel, this.currentQuality);
         
@@ -349,7 +358,7 @@ class MotherEarthRadio {
         
         this.log('info', '▶️ Playing: ' + streamUrl);
         
-        // Start SSE first
+        // Start SSE
         this.startSSE(this.currentChannel);
         
         // Play via MPD
@@ -358,15 +367,14 @@ class MotherEarthRadio {
             .then(function() { return self.mpdPlugin.sendMpdCommand('add "' + streamUrl + '"', []); })
             .then(function() { return self.mpdPlugin.sendMpdCommand('play', []); })
             .then(function() {
-                // Push initial state
                 const channel = self.channels[self.currentChannel];
                 const qualityLabel = self.getQualityLabel(self.currentQuality);
                 
                 self.commandRouter.servicePushState({
                     status: 'play',
                     service: SERVICE_NAME,
-                    title: channel.name,
-                    artist: 'Mother Earth Radio',
+                    title: 'Connecting...',
+                    artist: channel.name,
                     album: qualityLabel,
                     albumart: '/albumart?sourceicon=music_service/motherearthradio/motherearthlogo.svg',
                     uri: track.uri,
@@ -383,6 +391,7 @@ class MotherEarthRadio {
             })
             .fail(function(err) {
                 self.log('error', 'Play failed: ' + err);
+                self.isPlaying = false;
                 defer.reject(err);
             });
         
@@ -390,7 +399,9 @@ class MotherEarthRadio {
     }
 
     stop() {
-        this.stopSSE();
+        this.log('info', '⏹️ Stop called');
+        this.isPlaying = false;  // Clear playing flag FIRST
+        this.stopSSE();          // Then stop SSE
         
         this.commandRouter.servicePushState({
             status: 'stop',
@@ -401,7 +412,8 @@ class MotherEarthRadio {
     }
 
     pause() {
-        return this.stop();
+        this.log('info', '⏸️ Pause called');
+        return this.stop();  // For live streams, pause = stop
     }
 
     resume() {
