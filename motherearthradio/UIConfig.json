@@ -22,7 +22,7 @@
           "type": "number",
           "label": "API_DELAY",
           "doc": "DELAY_DOC",
-          "value": 0
+          "value": 3
         }
       ]
     },
