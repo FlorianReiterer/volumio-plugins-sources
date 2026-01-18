@@ -201,11 +201,19 @@ class MotherEarthRadio {
     handleSSEMessage(message, channelKey) {
         const lines = message.split('\n');
         let data = null;
+        let rawData = null;
         
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].indexOf('data: ') === 0) {
+                rawData = lines[i].substring(6).trim();
+                
+                // 🔥 IGNORE EMPTY PINGS (like Android app)
+                if (rawData === '' || rawData === '{}') {
+                    return;
+                }
+                
                 try {
-                    data = JSON.parse(lines[i].substring(6));
+                    data = JSON.parse(rawData);
                 } catch (e) {
                     // Ignore parse errors
                 }
@@ -213,6 +221,11 @@ class MotherEarthRadio {
         }
         
         if (!data) return;
+        
+        // 🔥 IGNORE EMPTY JSON OBJECTS
+        if (Object.keys(data).length === 0) {
+            return;
+        }
         
         if (data.connect) {
             if (data.connect.data && Array.isArray(data.connect.data)) {
@@ -239,9 +252,8 @@ class MotherEarthRadio {
         const duration = np.now_playing.duration || np.now_playing.remaining || 0;
         const elapsed = np.now_playing.elapsed || 0;
         
-        // 🔥 IGNORE EMPTY SSE PINGS (Keep-Alive) - check for valid song data
+        // 🔥 IGNORE EMPTY SSE PINGS - must have valid song with title AND artist
         if (!song || !song.title || !song.artist) {
-            this.log('info', '🔇 Ignoring empty SSE ping (keep-alive)');
             return;
         }
 
