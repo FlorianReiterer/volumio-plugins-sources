@@ -31,7 +31,7 @@
       "element": "section", 
       "label": "About",
       "icon": "fa-info-circle",
-      "description": "Mother Earth Radio Plugin v1.4 - SSE real-time metadata. No polling needed."
+      "description": "Mother Earth Radio Plugin v1.4 - SSE real-time metadata. Three qualities: FLAC 192kHz, FLAC 96kHZ, AAC 96kHz. Higher Network Buffer if needed."
     }
   ]
 }
