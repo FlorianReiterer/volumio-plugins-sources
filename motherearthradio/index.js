@@ -494,7 +494,7 @@ class MotherEarthRadio {
             uri: 'motherearthradio',
             plugin_type: 'music_service',
             plugin_name: 'motherearthradio',
-            albumart: '/albumart?sourceicon=music_service/motherearthradio/mer-logo-wide-smooth-1x.png'
+            albumart: '/albumart?sourceicon=music_service/motherearthradio/motherearthlogo.svg'
         };
         this.commandRouter.volumioAddToBrowseSources(data);
     }
