@@ -201,19 +201,11 @@ class MotherEarthRadio {
     handleSSEMessage(message, channelKey) {
         const lines = message.split('\n');
         let data = null;
-        let rawData = null;
         
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].indexOf('data: ') === 0) {
-                rawData = lines[i].substring(6).trim();
-                
-                // 🔥 IGNORE EMPTY PINGS (like Android app)
-                if (rawData === '' || rawData === '{}') {
-                    return;
-                }
-                
                 try {
-                    data = JSON.parse(rawData);
+                    data = JSON.parse(lines[i].substring(6));
                 } catch (e) {
                     // Ignore parse errors
                 }
@@ -221,11 +213,6 @@ class MotherEarthRadio {
         }
         
         if (!data) return;
-        
-        // 🔥 IGNORE EMPTY JSON OBJECTS
-        if (Object.keys(data).length === 0) {
-            return;
-        }
         
         if (data.connect) {
             if (data.connect.data && Array.isArray(data.connect.data)) {
@@ -252,10 +239,7 @@ class MotherEarthRadio {
         const duration = np.now_playing.duration || np.now_playing.remaining || 0;
         const elapsed = np.now_playing.elapsed || 0;
         
-        // 🔥 IGNORE EMPTY SSE PINGS - must have valid song with title AND artist
-        if (!song || !song.title || !song.artist) {
-            return;
-        }
+        if (!song) return;
 
         this.log('info', '🎵 ' + song.artist + ' - ' + song.title);
         
@@ -299,7 +283,7 @@ class MotherEarthRadio {
             album: song.album || channel.name,
             streaming: true,
             disableUiControls: true,
-            duration: 0,  // 🔥 ALWAYS 0 for webradio - prevents seek overflow
+            duration: duration,
             seek: 0,
             samplerate: samplerate,
             bitdepth: bitdepth,
@@ -320,7 +304,7 @@ class MotherEarthRadio {
                 queueItem.album = song.album || channel.name;
                 queueItem.albumart = albumart;
                 queueItem.trackType = 'Mother Earth ' + channel.name;
-                queueItem.duration = 0;  // 🔥 ALWAYS 0 for webradio
+                queueItem.duration = duration;
                 queueItem.samplerate = samplerate;
                 queueItem.bitdepth = bitdepth;
                 queueItem.channels = 2;
@@ -329,7 +313,7 @@ class MotherEarthRadio {
             // Reset Volumio internal timer
             this.commandRouter.stateMachine.currentSeek = 0;
             this.commandRouter.stateMachine.playbackStart = Date.now();
-            this.commandRouter.stateMachine.currentSongDuration = 0;  // 🔥 ALWAYS 0 for webradio
+            this.commandRouter.stateMachine.currentSongDuration = duration;
             this.commandRouter.stateMachine.askedForPrefetch = false;
             this.commandRouter.stateMachine.prefetchDone = false;
             this.commandRouter.stateMachine.simulateStopStartDone = false;
