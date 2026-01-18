@@ -125,78 +125,64 @@ class MotherEarthRadio {
     // ═══════════════════════════════════════════════════════════════════════════
 
     startSSE(channelKey) {
-        this.stopSSE();
-        
-        const channel = this.channels[channelKey];
-        if (!channel) {
-            this.log('error', 'Unknown channel: ' + channelKey);
-            return;
-        }
-        
-        const subs = { subs: { ['station:' + channel.shortcode]: {} } };
-        const sseUrl = 'https://' + this.apiHost + '/api/live/nowplaying/sse?cf_connect=' + encodeURIComponent(JSON.stringify(subs));
-        
-        this.log('info', '🔌 Starting SSE for ' + channel.name);
-        this.connectSSE(sseUrl, channelKey);
-    }
+    this.stopSSE();
+    
+    const channel = this.channels[channelKey];
+    if (!channel) return;
 
-    connectSSE(sseUrl, channelKey) {
-        const self = this;
-        const url = new URL(sseUrl);
-        
-        const options = {
-            hostname: url.hostname,
-            port: 443,
-            path: url.pathname + url.search,
-            method: 'GET',
-            headers: {
-                'Accept': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive'
-            }
-        };
+    const sseUrl = channel.api.sse;
+    this.log('info', `Starting SSE connection: ${sseUrl}`);
 
-        this.sseRequest = https.request(options, function(response) {
-            if (response.statusCode !== 200) {
-                self.log('error', 'SSE connection failed: ' + response.statusCode);
-                self.scheduleSSEReconnect(sseUrl, channelKey);
-                return;
-            }
+    const https = require('https');
+    const urlParsed = new URL(sseUrl);
 
-            self.log('info', '✅ SSE connected');
-            self.sseReconnectAttempts = 0;
+    const request = https.request({
+        hostname: urlParsed.hostname,
+        path: urlParsed.pathname + urlParsed.search,
+        method: 'GET',
+        headers: { 'Accept': 'text/event-stream' }
+    }, (res) => {
+        let buffer = '';
 
-            let buffer = '';
+        res.on('data', (chunk) => {
+            buffer += chunk.toString();
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
 
-            response.on('data', function(chunk) {
-                buffer += chunk.toString();
-                
-                const messages = buffer.split('\n\n');
-                buffer = messages.pop();
-                
-                for (let i = 0; i < messages.length; i++) {
-                    self.handleSSEMessage(messages[i], channelKey);
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.substring(6));
+                        
+                        // 🔥 IGNORE EMPTY PINGS
+                        if (!data.now_playing || !data.now_playing.song) {
+                            this.log('info', 'Ignoring empty SSE ping (keep-alive)');
+                            continue;
+                        }
+                        
+                        // Valid metadata with actual song data
+                        this.handleMetadata(data);
+                    } catch (e) {
+                        this.log('error', 'SSE parse error: ' + e.message);
+                    }
                 }
-            });
-
-            response.on('end', function() {
-                self.log('warn', 'SSE connection closed');
-                self.scheduleSSEReconnect(sseUrl, channelKey);
-            });
-
-            response.on('error', function(err) {
-                self.log('error', 'SSE error: ' + err.message);
-                self.scheduleSSEReconnect(sseUrl, channelKey);
-            });
+            }
         });
 
-        this.sseRequest.on('error', function(err) {
-            self.log('error', 'SSE request error: ' + err.message);
-            self.scheduleSSEReconnect(sseUrl, channelKey);
+        res.on('end', () => {
+            this.log('warn', 'SSE connection ended, reconnecting in 5s...');
+            setTimeout(() => this.startSSE(channelKey), 5000);
         });
+    });
 
-        this.sseRequest.end();
-    }
+    request.on('error', (e) => {
+        this.log('error', 'SSE connection error: ' + e.message);
+        setTimeout(() => this.startSSE(channelKey), 10000);
+    });
+
+    request.end();
+    this.sseConnection = request;
+}
 
     handleSSEMessage(message, channelKey) {
         const lines = message.split('\n');
