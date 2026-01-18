@@ -55,7 +55,8 @@ class MotherEarthRadio {
                 name: 'Radio',
                 shortcode: 'motherearth',
                 streams: {
-                    flac: 'https://motherearth.streamserver24.com/listen/motherearth/motherearth',
+                    flac192: 'https://motherearth.streamserver24.com/listen/motherearth/motherearth',
+                    flac96: 'https://motherearth.streamserver24.com/listen/motherearth/motherearth.flac-lo',
                     aac: 'https://motherearth.streamserver24.com/listen/motherearth/motherearth.aac'
                 }
             },
@@ -63,7 +64,8 @@ class MotherEarthRadio {
                 name: 'Klassik',
                 shortcode: 'motherearth_klassik',
                 streams: {
-                    flac: 'https://motherearth.streamserver24.com/listen/motherearth_klassik/motherearth.klassik',
+                    flac192: 'https://motherearth.streamserver24.com/listen/motherearth_klassik/motherearth.klassik',
+                    flac96: 'https://motherearth.streamserver24.com/listen/motherearth_klassik/motherearth.klassik.flac-lo',
                     aac: 'https://motherearth.streamserver24.com/listen/motherearth_klassik/motherearth.klassik.aac'
                 }
             },
@@ -71,7 +73,8 @@ class MotherEarthRadio {
                 name: 'Instrumental',
                 shortcode: 'motherearth_instrumental',
                 streams: {
-                    flac: 'https://motherearth.streamserver24.com/listen/motherearth_instrumental/motherearth.instrumental',
+                    flac192: 'https://motherearth.streamserver24.com/listen/motherearth_instrumental/motherearth.instrumental',
+                    flac96: 'https://motherearth.streamserver24.com/listen/motherearth_instrumental/motherearth.instrumental.flac-lo',
                     aac: 'https://motherearth.streamserver24.com/listen/motherearth_instrumental/motherearth.instrumental.aac'
                 }
             },
@@ -79,7 +82,8 @@ class MotherEarthRadio {
                 name: 'Jazz',
                 shortcode: 'motherearth_jazz',
                 streams: {
-                    flac: 'https://motherearth.streamserver24.com/listen/motherearth_jazz/motherearth.jazz',
+                    flac192: 'https://motherearth.streamserver24.com/listen/motherearth_jazz/motherearth.jazz',
+                    flac96: 'https://motherearth.streamserver24.com/listen/motherearth_jazz/motherearth.jazz.flac-lo',
                     aac: 'https://motherearth.streamserver24.com/listen/motherearth_jazz/motherearth.jazz.aac'
                 }
             }
@@ -375,35 +379,48 @@ class MotherEarthRadio {
     clearAddPlayTrack(track) {
         const defer = libQ.defer();
         
-        // Determine channel from URI
+        // Determine channel and quality from URI
         this.currentChannel = this.getChannelFromUri(track.uri);
+        this.currentQuality = this.getQualityFromUri(track.uri);
         this.currentUri = track.uri;
         
-        this.log('info', `▶️ Playing: ${track.uri}`);
+        // Get the actual stream URL
+        const streamUrl = this.getStreamUrl(this.currentChannel, this.currentQuality);
+        
+        if (!streamUrl) {
+            this.log('error', `Unknown channel/quality: ${track.uri}`);
+            defer.reject('Unknown channel');
+            return defer.promise;
+        }
+        
+        this.log('info', `▶️ Playing: ${this.currentChannel}/${this.currentQuality} → ${streamUrl}`);
         
         // Start SSE for real-time metadata
         this.startSSE(this.currentChannel);
         
         // Tell MPD to play the stream
-        this.commandRouter.pushConsoleMessage('[MER] Adding track to MPD: ' + track.uri);
+        this.commandRouter.pushConsoleMessage('[MER] Adding track to MPD: ' + streamUrl);
         
         this.mpdPlugin.sendMpdCommand('stop', [])
             .then(() => this.mpdPlugin.sendMpdCommand('clear', []))
-            .then(() => this.mpdPlugin.sendMpdCommand('add "' + track.uri + '"', []))
+            .then(() => this.mpdPlugin.sendMpdCommand('add "' + streamUrl + '"', []))
             .then(() => this.mpdPlugin.sendMpdCommand('play', []))
             .then(() => {
                 // Set initial state while waiting for SSE data
                 const channel = this.channels[this.currentChannel];
+                const qualityLabel = this.getQualityLabel(this.currentQuality);
                 this.state = {
                     status: 'play',
                     service: 'motherearthradio',
                     title: `${channel?.name || 'Mother Earth Radio'}`,
                     artist: 'Connecting...',
-                    album: '',
+                    album: qualityLabel,
                     albumart: '/albumart?sourceicon=music_service/motherearthradio/mer.svg',
                     uri: track.uri,
                     streaming: true,
-                    isStreaming: true
+                    isStreaming: true,
+                    samplerate: this.getSampleRate(this.currentQuality),
+                    bitdepth: this.getBitDepth(this.currentQuality)
                 };
                 this.commandRouter.servicePushState(this.state, 'motherearthradio');
                 defer.resolve();
@@ -414,6 +431,33 @@ class MotherEarthRadio {
             });
         
         return defer.promise;
+    }
+
+    getQualityLabel(quality) {
+        const labels = {
+            'flac192': 'FLAC 192kHz/24bit',
+            'flac96': 'FLAC 96kHz/24bit',
+            'aac': 'AAC 96kHz'
+        };
+        return labels[quality] || quality;
+    }
+
+    getSampleRate(quality) {
+        const rates = {
+            'flac192': '192 kHz',
+            'flac96': '96 kHz',
+            'aac': '96 kHz'
+        };
+        return rates[quality] || '';
+    }
+
+    getBitDepth(quality) {
+        const depths = {
+            'flac192': '24 bit',
+            'flac96': '24 bit',
+            'aac': ''
+        };
+        return depths[quality] || '';
     }
 
     stop() {
@@ -470,25 +514,36 @@ class MotherEarthRadio {
         const items = [];
         
         for (const [key, channel] of Object.entries(this.channels)) {
-            // FLAC stream
+            // FLAC 192kHz/24bit (Hi-Res)
+            items.push({
+                service: 'motherearthradio',
+                type: 'song',
+                title: `${channel.name} (FLAC 192kHz/24bit)`,
+                artist: 'Mother Earth Radio',
+                album: 'Hi-Res Lossless',
+                uri: `motherearthradio/${key}/flac192`,
+                albumart: '/albumart?sourceicon=music_service/motherearthradio/mer.svg'
+            });
+            
+            // FLAC 96kHz/24bit
             items.push({
                 service: 'motherearthradio',
                 type: 'song',
                 title: `${channel.name} (FLAC 96kHz/24bit)`,
                 artist: 'Mother Earth Radio',
-                album: 'Hi-Res Lossless',
-                uri: channel.streams.flac,
+                album: 'Lossless',
+                uri: `motherearthradio/${key}/flac96`,
                 albumart: '/albumart?sourceicon=music_service/motherearthradio/mer.svg'
             });
             
-            // AAC stream
+            // AAC 96kHz
             items.push({
                 service: 'motherearthradio',
                 type: 'song',
-                title: `${channel.name} (AAC 256kbps)`,
+                title: `${channel.name} (AAC 96kHz)`,
                 artist: 'Mother Earth Radio',
                 album: 'High Quality',
-                uri: channel.streams.aac,
+                uri: `motherearthradio/${key}/aac`,
                 albumart: '/albumart?sourceicon=music_service/motherearthradio/mer.svg'
             });
         }
@@ -508,6 +563,7 @@ class MotherEarthRadio {
         const defer = libQ.defer();
         
         const channelKey = this.getChannelFromUri(uri);
+        const quality = this.getQualityFromUri(uri);
         const channel = this.channels[channelKey];
         
         if (!channel) {
@@ -515,21 +571,23 @@ class MotherEarthRadio {
             return defer.promise;
         }
 
-        const isFlac = uri.includes(channel.streams.flac);
+        const streamUrl = this.getStreamUrl(channelKey, quality);
+        const qualityLabel = this.getQualityLabel(quality);
         
         defer.resolve([{
             service: 'motherearthradio',
             type: 'track',
-            trackType: isFlac ? 'flac' : 'aac',
+            trackType: quality.startsWith('flac') ? 'flac' : 'aac',
             radioType: 'motherearthradio',
-            title: `${channel.name} (${isFlac ? 'FLAC' : 'AAC'})`,
+            title: `${channel.name} (${qualityLabel})`,
             artist: 'Mother Earth Radio',
-            album: '',
+            album: qualityLabel,
             uri: uri,
+            realUri: streamUrl,
             albumart: '/albumart?sourceicon=music_service/motherearthradio/mer.svg',
             duration: 0,
-            samplerate: isFlac ? '96 kHz' : '44.1 kHz',
-            bitdepth: isFlac ? '24 bit' : '16 bit'
+            samplerate: this.getSampleRate(quality),
+            bitdepth: this.getBitDepth(quality)
         }]);
         
         return defer.promise;
@@ -663,16 +721,46 @@ class MotherEarthRadio {
     getChannelFromUri(uri) {
         if (!uri) return 'radio';
         
-        for (const [key, channel] of Object.entries(this.channels)) {
-            if (uri.includes(channel.streams.flac) || uri.includes(channel.streams.aac)) {
-                return key;
+        // New format: motherearthradio/channel/quality
+        const parts = uri.split('/');
+        if (parts[0] === 'motherearthradio' && parts.length >= 2) {
+            const channelKey = parts[1];
+            if (this.channels[channelKey]) {
+                return channelKey;
             }
-            // Also check by shortcode in URL
+        }
+        
+        // Fallback: check by shortcode in URL (for direct stream URLs)
+        for (const [key, channel] of Object.entries(this.channels)) {
             if (uri.includes(channel.shortcode)) {
                 return key;
             }
         }
         return 'radio';  // Default
+    }
+
+    getQualityFromUri(uri) {
+        if (!uri) return 'flac192';
+        
+        // New format: motherearthradio/channel/quality
+        const parts = uri.split('/');
+        if (parts[0] === 'motherearthradio' && parts.length >= 3) {
+            const quality = parts[2];
+            if (['flac192', 'flac96', 'aac'].includes(quality)) {
+                return quality;
+            }
+        }
+        
+        // Fallback: detect from URL
+        if (uri.includes('.flac-lo')) return 'flac96';
+        if (uri.includes('.aac')) return 'aac';
+        return 'flac192';  // Default to highest quality
+    }
+
+    getStreamUrl(channelKey, quality) {
+        const channel = this.channels[channelKey];
+        if (!channel) return null;
+        return channel.streams[quality] || channel.streams.flac192;
     }
 
     loadI18nStrings() {
@@ -729,7 +817,7 @@ class MotherEarthRadio {
             effectiveDelay: this.getEffectiveDelay(),
             bufferSize: this.highLatencyMode ? `${HIGH_LATENCY_BUFFER_KB} KB (High Latency)` : `${NORMAL_BUFFER_KB} KB (Normal)`,
             state: this.state,
-            version: '2.1.0'
+            version: '1.4.0'
         };
     }
 }
