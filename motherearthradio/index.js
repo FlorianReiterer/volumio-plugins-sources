@@ -316,7 +316,7 @@ class MotherEarthRadio {
             title: song.title || 'Unknown',
             artist: song.artist || channel.name,
             album: song.album || '',
-            albumart: song.art || '/albumart?sourceicon=music_service/motherearthradio/mer.svg',
+            albumart: song.art || '/albumart?sourceicon=music_service/motherearthradio/motherearthlogo.svg',
             uri: this.currentUri,
             trackType: this.currentUri?.includes('.aac') ? 'aac' : 'flac',
             seek: elapsed * 1000,
