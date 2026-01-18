@@ -29,13 +29,13 @@ class MotherEarthRadio {
         this.currentUri = null;
         this.currentChannel = null;
         this.currentQuality = null;
-        this.isPlaying = false;  // Track play state to prevent SSE from restarting playback
+        this.isPlaying = false;
         
         this.sseRequest = null;
         this.sseReconnectAttempts = 0;
         this.sseReconnectTimer = null;
         
-        this.metadataDelay = 0;
+        this.metadataDelay = 3;
         this.highLatencyMode = false;
         
         this.apiHost = 'motherearth.streamserver24.com';
@@ -207,7 +207,7 @@ class MotherEarthRadio {
                 try {
                     data = JSON.parse(lines[i].substring(6));
                 } catch (e) {
-                    // Ignore
+                    // Ignore parse errors
                 }
             }
         }
@@ -227,9 +227,7 @@ class MotherEarthRadio {
     }
 
     processNowPlayingData(data, channelKey) {
-        // Don't push state if not playing!
         if (!this.isPlaying) {
-            this.log('info', '⏸️ SSE update ignored - not playing');
             return;
         }
         
@@ -238,7 +236,7 @@ class MotherEarthRadio {
         if (!np || !np.now_playing) return;
 
         const song = np.now_playing.song;
-        const duration = np.now_playing.duration || 0;
+        const duration = np.now_playing.duration || np.now_playing.remaining || 0;
         const elapsed = np.now_playing.elapsed || 0;
         
         if (!song) return;
@@ -258,12 +256,12 @@ class MotherEarthRadio {
     }
 
     pushMetadata(song, duration, elapsed) {
-        // Double-check we're still playing
         if (!this.isPlaying) {
             this.log('info', '⏸️ pushMetadata ignored - not playing');
             return;
         }
         
+        const self = this;
         const channel = this.channels[this.currentChannel];
         if (!channel) return;
 
@@ -271,36 +269,67 @@ class MotherEarthRadio {
         const bitdepth = this.getBitDepth(this.currentQuality);
         const albumart = song.art || '/albumart?sourceicon=music_service/motherearthradio/motherearthlogo.svg';
 
-        // FIXED: title = song title, artist = artist name
-        const state = {
+        const merState = {
             status: 'play',
             service: SERVICE_NAME,
-            title: song.title || 'Unknown Title',      // Song title goes here!
-            artist: song.artist || 'Mother Earth Radio', // Artist name goes here!
-            album: song.album || channel.name,
+            type: 'webradio',
+            trackType: (this.currentQuality === 'aac') ? 'aac' : 'flac',
+            radioType: 'mer',
             albumart: albumart,
             uri: this.currentUri,
-            trackType: (this.currentQuality === 'aac') ? 'aac' : 'flac',
-            seek: elapsed * 1000,
+            name: song.title || 'Unknown',
+            title: song.title || 'Unknown',
+            artist: song.artist || 'Mother Earth Radio',
+            album: song.album || channel.name,
+            streaming: true,
+            disableUiControls: true,
             duration: duration,
+            seek: 0,
             samplerate: samplerate,
             bitdepth: bitdepth,
-            channels: 2,
-            streaming: true,
-            isStreaming: true
+            channels: 2
         };
-
-        this.log('info', '📤 State: title=' + state.title + ', artist=' + state.artist);
         
-        this.commandRouter.servicePushState(state, SERVICE_NAME);
+        this.state = merState;
+        
+        // WORKAROUND: Directly modify queue item to allow state update for webradio
+        try {
+            const vState = this.commandRouter.stateMachine.getState();
+            const queueItem = this.commandRouter.stateMachine.playQueue.arrayQueue[vState.position];
+            
+            if (queueItem) {
+                queueItem.name = song.title || 'Unknown';
+                queueItem.title = song.title || 'Unknown';
+                queueItem.artist = song.artist || 'Mother Earth Radio';
+                queueItem.album = song.album || channel.name;
+                queueItem.albumart = albumart;
+                queueItem.trackType = 'Mother Earth ' + channel.name;
+                queueItem.duration = duration;
+                queueItem.samplerate = samplerate;
+                queueItem.bitdepth = bitdepth;
+                queueItem.channels = 2;
+            }
+            
+            // Reset Volumio internal timer
+            this.commandRouter.stateMachine.currentSeek = 0;
+            this.commandRouter.stateMachine.playbackStart = Date.now();
+            this.commandRouter.stateMachine.currentSongDuration = duration;
+            this.commandRouter.stateMachine.askedForPrefetch = false;
+            this.commandRouter.stateMachine.prefetchDone = false;
+            this.commandRouter.stateMachine.simulateStopStartDone = false;
+        } catch (e) {
+            this.log('error', 'Queue update failed: ' + e.message);
+        }
+
+        this.log('info', '📤 ' + song.artist + ' - ' + song.title);
+        
+        this.commandRouter.servicePushState(merState, SERVICE_NAME);
     }
 
     scheduleSSEReconnect(sseUrl, channelKey) {
         const self = this;
         
-        // Don't reconnect if not playing
         if (!this.isPlaying) {
-            this.log('info', '⏸️ SSE reconnect skipped - not playing');
             return;
         }
         
@@ -331,7 +360,6 @@ class MotherEarthRadio {
         }
         
         this.sseReconnectAttempts = 0;
-        this.log('info', '🔌 SSE stopped');
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -347,7 +375,7 @@ class MotherEarthRadio {
         this.currentChannel = this.getChannelFromUri(track.uri);
         this.currentQuality = this.getQualityFromUri(track.uri);
         this.currentUri = track.uri;
-        this.isPlaying = true;  // Set playing flag
+        this.isPlaying = true;
         
         const streamUrl = this.getStreamUrl(this.currentChannel, this.currentQuality);
         
@@ -358,10 +386,8 @@ class MotherEarthRadio {
         
         this.log('info', '▶️ Playing: ' + streamUrl);
         
-        // Start SSE
         this.startSSE(this.currentChannel);
         
-        // Play via MPD
         this.mpdPlugin.sendMpdCommand('stop', [])
             .then(function() { return self.mpdPlugin.sendMpdCommand('clear', []); })
             .then(function() { return self.mpdPlugin.sendMpdCommand('add "' + streamUrl + '"', []); })
@@ -373,14 +399,16 @@ class MotherEarthRadio {
                 self.commandRouter.servicePushState({
                     status: 'play',
                     service: SERVICE_NAME,
+                    type: 'webradio',
+                    trackType: (self.currentQuality === 'aac') ? 'aac' : 'flac',
+                    radioType: 'mer',
                     title: 'Connecting...',
-                    artist: channel.name,
-                    album: qualityLabel,
+                    artist: 'Mother Earth Radio',
+                    album: channel.name + ' · ' + qualityLabel,
                     albumart: '/albumart?sourceicon=music_service/motherearthradio/motherearthlogo.svg',
                     uri: track.uri,
-                    trackType: (self.currentQuality === 'aac') ? 'aac' : 'flac',
                     streaming: true,
-                    isStreaming: true,
+                    disableUiControls: true,
                     samplerate: self.getSampleRate(self.currentQuality),
                     bitdepth: self.getBitDepth(self.currentQuality),
                     duration: 0,
@@ -399,9 +427,8 @@ class MotherEarthRadio {
     }
 
     stop() {
-        this.log('info', '⏹️ Stop called');
-        this.isPlaying = false;  // Clear playing flag FIRST
-        this.stopSSE();          // Then stop SSE
+        this.isPlaying = false;
+        this.stopSSE();
         
         this.commandRouter.servicePushState({
             status: 'stop',
@@ -412,8 +439,7 @@ class MotherEarthRadio {
     }
 
     pause() {
-        this.log('info', '⏸️ Pause called');
-        return this.stop();  // For live streams, pause = stop
+        return this.stop();
     }
 
     resume() {
