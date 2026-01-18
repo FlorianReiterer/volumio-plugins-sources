@@ -14,5 +14,5 @@
   "DELAY_DOC": "Extra Verzögerung in Millisekunden bevor Metadaten angezeigt werden. Verwenden wenn Metadaten immer noch vor dem Songwechsel erscheinen. Normalerweise ist 0 in Ordnung.",
   
   "ABOUT": "Über",
-  "ABOUT_DESC": "Mother Earth Radio Plugin v2.1 - Nutzt Server-Sent Events (SSE) für Echtzeit-Metadaten. Kein Polling nötig - der Server sendet Track-Änderungen sofort."
+  "ABOUT_DESC": "Mother Earth Radio Plugin v1.4 - Nutzt Server-Sent Events (SSE) für Echtzeit-Metadaten. Kein Polling nötig - der Server sendet Track-Änderungen sofort."
 }
