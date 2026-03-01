@@ -1,6 +1,6 @@
 {
   "name": "motherearthradio",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Hi Res Audio and Vinyl streaming",
   "main": "index.js",
   "scripts": {
@@ -21,8 +21,8 @@
     "os": [
       "bookworm"
     ],
-    "details": "Mother Earth Radio is a free HD music station without advertising. Best audio quality, selected tracks, audiophile only. Stream now!",
-    "changelog": "1.4.0 SSE real-time metadata, High Latency Mode, 3 quality levels (192k/96k FLAC, AAC)"
+    "details": "High Resolution Radio – Mother Earth Radio is the world's first station streaming exclusively in lossless FLAC quality up to 192 kHz / 24-bit. Carefully curated classical, jazz, and instrumental music – handpicked for audiophile listeners. Hi Res Audio & Vinyl, no advertising, no compression, no compromises. Stream now.",
+    "changelog": "1.4.1 migrated to new server"
   },
   "engines": {
     "node": ">=20",
