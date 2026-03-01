@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Mother Earth Radio Plugin v1.4
+ * Mother Earth Radio Plugin v1.4.1
  */
 
 const libQ = require('kew');
