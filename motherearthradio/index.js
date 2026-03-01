@@ -41,43 +41,43 @@ class MotherEarthRadio {
         this.metadataDelay = 0;
         this.highLatencyMode = false;
         
-        this.apiHost = 'motherearth.streamserver24.com';
+        this.apiHost = 'stream.motherearthradio.de';
         
         this.channels = {
             'radio': {
                 name: 'Radio',
                 shortcode: 'motherearth',
                 streams: {
-                    flac192: 'https://motherearth.streamserver24.com/listen/motherearth/motherearth',
-                    flac96: 'https://motherearth.streamserver24.com/listen/motherearth/motherearth.flac-lo',
-                    aac: 'https://motherearth.streamserver24.com/listen/motherearth/motherearth.aac'
+                    flac192: 'https://stream.motherearthradio.de/listen/motherearth/motherearth',
+                    flac96: 'https://stream.motherearthradio.de/listen/motherearth/motherearth.flac-lo',
+                    aac: 'https://stream.motherearthradio.de/listen/motherearth/motherearth.aac'
                 }
             },
             'klassik': {
                 name: 'Klassik',
                 shortcode: 'motherearth_klassik',
                 streams: {
-                    flac192: 'https://motherearth.streamserver24.com/listen/motherearth_klassik/motherearth.klassik',
-                    flac96: 'https://motherearth.streamserver24.com/listen/motherearth_klassik/motherearth.klassik.flac-lo',
-                    aac: 'https://motherearth.streamserver24.com/listen/motherearth_klassik/motherearth.klassik.aac'
+                    flac192: 'https://stream.motherearthradio.de/listen/motherearth_klassik/motherearth.klassik',
+                    flac96: 'https://stream.motherearthradio.de/listen/motherearth_klassik/motherearth.klassik.flac-lo',
+                    aac: 'https://stream.motherearthradio.de/listen/motherearth_klassik/motherearth.klassik.aac'
                 }
             },
             'instrumental': {
                 name: 'Instrumental',
                 shortcode: 'motherearth_instrumental',
                 streams: {
-                    flac192: 'https://motherearth.streamserver24.com/listen/motherearth_instrumental/motherearth.instrumental',
-                    flac96: 'https://motherearth.streamserver24.com/listen/motherearth_instrumental/motherearth.instrumental.flac-lo',
-                    aac: 'https://motherearth.streamserver24.com/listen/motherearth_instrumental/motherearth.instrumental.aac'
+                    flac192: 'https://stream.motherearthradio.de/listen/motherearth_instrumental/motherearth.instrumental',
+                    flac96: 'https://stream.motherearthradio.de/listen/motherearth_instrumental/motherearth.instrumental.flac-lo',
+                    aac: 'https://stream.motherearthradio.de/listen/motherearth_instrumental/motherearth.instrumental.aac'
                 }
             },
             'jazz': {
                 name: 'Jazz',
                 shortcode: 'motherearth_jazz',
                 streams: {
-                    flac192: 'https://motherearth.streamserver24.com/listen/motherearth_jazz/motherearth.jazz',
-                    flac96: 'https://motherearth.streamserver24.com/listen/motherearth_jazz/motherearth.jazz.flac-lo',
-                    aac: 'https://motherearth.streamserver24.com/listen/motherearth_jazz/motherearth.jazz.aac'
+                    flac192: 'https://stream.motherearthradio.de/listen/motherearth_jazz/motherearth.jazz',
+                    flac96: 'https://stream.motherearthradio.de/listen/motherearth_jazz/motherearth.jazz.flac-lo',
+                    aac: 'https://stream.motherearthradio.de/listen/motherearth_jazz/motherearth.jazz.aac'
                 }
             }
         };
